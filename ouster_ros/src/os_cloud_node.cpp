@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
         while(!isLastCloud){
             // cut the package into pieces 
             last_sub = first_sub + W_sub;
-            if(last_sub > pm.buf.end()) {//TODO: check if it better of worse(for the last piece of msg, if the size is less than W_sub, use previeous msg to replace it)
+            if(last_sub > pm.buf.end()) {//TODO: check if it's better or worse(for the last piece of msg, if the size is less than W_sub, use previeous msg to replace it)
                 last_sub = pm.buf.end(); 
                 first_sub = last_sub - W_sub; 
                 isLastCloud = true; 
