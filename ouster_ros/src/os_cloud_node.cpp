@@ -25,6 +25,11 @@ using Cloud = ouster_ros::Cloud;
 using Point = ouster_ros::Point;
 namespace sensor = ouster::sensor;
 
+// template <class ContainerAllocator>
+
+typedef std::vector<uint8_t, std::allocator<void>::rebind<uint8_t>::other>::const_iterator pm_buf_iter;
+typedef std::vector<uint8_t, std::allocator<void>::rebind<uint8_t>::other> pm_buf_type;
+
 int main(int argc, char** argv) {
     ros::init(argc, argv, "os_cloud_node");
     ros::NodeHandle nh("~");
@@ -47,9 +52,13 @@ int main(int argc, char** argv) {
     uint32_t H = info.format.pixels_per_column;
     uint32_t W = info.format.columns_per_frame;
 
+    uint32_t W_sub = info.format.columns_per_frame/12; // 360 degree divided by 30 degree is 12 parts. 
+    uint32_t H_sub = info.format.pixels_per_column; 
+
     auto pf = sensor::get_format(info);
 
     auto lidar_pub = nh.advertise<sensor_msgs::PointCloud2>("points", 10);
+    auto subCloud_pub = nh.advertise<sensor_msgs::PointCloud2>("sub_points", 10);
     auto imu_pub = nh.advertise<sensor_msgs::Imu>("imu", 100);
 
     auto xyz_lut = ouster::make_xyz_lut(info);
@@ -57,10 +66,15 @@ int main(int argc, char** argv) {
     Cloud cloud{W, H};
     ouster::LidarScan ls{W, H};
 
+    Cloud cloud_sub{W_sub, H_sub}; 
+    ouster::LidarScan ls_sub{W_sub, H_sub}; 
+
     ouster::ScanBatcher batch(W, pf);
+    ouster::ScanBatcher batch_sub(W_sub, pf);
 
     auto lidar_handler = [&](const PacketMsg& pm) mutable {
-        if (batch(pm.buf.data(), ls)) {
+        //for whole cloud
+        if (batch(pm.buf.data(), ls)) {//TODO: packetmsg to lidar scan
             auto h = std::find_if(
                 ls.headers.begin(), ls.headers.end(), [](const auto& h) {
                     return h.timestamp != std::chrono::nanoseconds{0};
@@ -71,6 +85,37 @@ int main(int argc, char** argv) {
                     cloud, h->timestamp, sensor_frame));
             }
         }
+        //for sub cloud
+        
+        pm_buf_iter first_sub = pm.buf.begin(); 
+        pm_buf_iter last_sub;
+        bool isLastCloud = false; 
+        while(!isLastCloud){
+            // cut the package into pieces 
+            last_sub = first_sub + W_sub;
+            if(last_sub > pm.buf.end()) {//TODO: check if it better of worse(for the last piece of msg, if the size is less than W_sub, use previeous msg to replace it)
+                last_sub = pm.buf.end(); 
+                first_sub = last_sub - W_sub; 
+                isLastCloud = true; 
+            }
+            pm_buf_type pm_buf_sub(first_sub, last_sub); // create a new package message with a piece of data. about 30 degree. 
+
+            // convert the package msg into laser scan
+            if (batch_sub(pm_buf_sub.data(), ls_sub)) {
+                auto h = std::find_if(
+                    ls_sub.headers.begin(), ls_sub.headers.end(), [](const auto& h) {
+                        return h.timestamp != std::chrono::nanoseconds{0};
+                    });
+                if (h != ls_sub.headers.end()) {
+                    scan_to_cloud(xyz_lut, h->timestamp, ls_sub, cloud_sub);
+                    subCloud_pub.publish(ouster_ros::cloud_to_cloud_msg(
+                        cloud_sub, h->timestamp, sensor_frame));
+                }
+            }
+            first_sub = first_sub + W_sub + 1; 
+
+        }
+        
     };
 
     auto imu_handler = [&](const PacketMsg& p) {

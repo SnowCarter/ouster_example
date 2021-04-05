@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "ouster/types.h"
+// #include <ros/ros.h>
 
 namespace ouster {
 
@@ -277,6 +278,15 @@ class ScanBatcher {
      * @return true when the provided lidar scan is ready to use
      */
     bool operator()(const uint8_t* packet_buf, LidarScan& ls);
+    /**
+     * Split packet into chuncks, 30 degree per chunck.
+     *
+     * @param packet_buf the lidar packet
+     * @param lidar scan to populate
+     * @param lidar_pub publish sub cloud.
+     * @return true when the provided lidar scan is ready to use
+     */
+    // void sub_cloud(const uint8_t* packet_buf, LidarScan& ls, const ros::Publisher& lidar_pub); 
 };
 
 }  // namespace ouster

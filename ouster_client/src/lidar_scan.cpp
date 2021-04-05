@@ -6,7 +6,7 @@
 
 namespace ouster {
 
-constexpr int LidarScan::N_FIELDS;
+constexpr int LidarScan::N_FIELDS;//4
 
 XYZLut make_xyz_lut(size_t w, size_t h, double range_unit,
                     double lidar_origin_to_beam_origin_mm,
@@ -79,9 +79,9 @@ bool ScanBatcher::operator()(const uint8_t* packet_buf, LidarScan& ls) {
 
     for (int icol = 0; icol < pf.columns_per_packet; icol++) {
         const uint8_t* col_buf = pf.nth_col(icol, packet_buf);
-        const uint16_t m_id = pf.col_measurement_id(col_buf);
-        const uint16_t f_id = pf.col_frame_id(col_buf);
-        const std::chrono::nanoseconds ts(pf.col_timestamp(col_buf));
+        const uint16_t m_id = pf.col_measurement_id(col_buf);//8
+        const uint16_t f_id = pf.col_frame_id(col_buf);//10
+        const std::chrono::nanoseconds ts(pf.col_timestamp(col_buf));//0
         const uint32_t encoder = pf.col_encoder(col_buf);
         const uint32_t status = pf.col_status(col_buf);
         const bool valid = (status == 0xffffffff);
