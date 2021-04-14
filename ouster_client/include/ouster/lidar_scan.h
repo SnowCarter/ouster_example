@@ -258,7 +258,7 @@ class ScanBatcher {
     std::ptrdiff_t h;
     uint16_t next_m_id;
     LidarScan ls_write;
-
+    LidarScan ls_write_sub;
    public:
     sensor::packet_format pf;
 
@@ -278,6 +278,7 @@ class ScanBatcher {
      * @return true when the provided lidar scan is ready to use
      */
     bool operator()(const uint8_t* packet_buf, LidarScan& ls);
+
     /**
      * Split packet into chuncks, 30 degree per chunck.
      *
@@ -286,7 +287,7 @@ class ScanBatcher {
      * @param lidar_pub publish sub cloud.
      * @return true when the provided lidar scan is ready to use
      */
-    // void sub_cloud(const uint8_t* packet_buf, LidarScan& ls, const ros::Publisher& lidar_pub); 
+    bool operator()(const uint8_t* packet_buf, LidarScan& ls, bool is_sub);
 };
 
 }  // namespace ouster
