@@ -58,16 +58,16 @@ int main(int argc, char** argv) {
 
     auto pf = sensor::get_format(info);
 
-    uint32_t W_sub = pf.columns_per_packet; //16:  360 degree divided by 22.5 degree is 16 parts. 
-    uint32_t H_sub = info.format.pixels_per_column;
-    info_sub.format.columns_per_frame = W_sub; 
+    // uint32_t W_sub = pf.columns_per_packet; //16:  360 degree divided by 22.5 degree is 16 parts. 
+    // uint32_t H_sub = info.format.pixels_per_column;
+    // info_sub.format.columns_per_frame = W_sub; 
 
     auto lidar_pub = nh.advertise<sensor_msgs::PointCloud2>("points", 10);
     auto subCloud_pub = nh.advertise<sensor_msgs::PointCloud2>("sub_points", 10);
     auto imu_pub = nh.advertise<sensor_msgs::Imu>("imu", 100);
 
     auto xyz_lut = ouster::make_xyz_lut(info);
-    auto xyz_lut_sub = ouster::make_xyz_lut(info_sub);
+    auto xyz_lut_sub = ouster::make_xyz_lut(info);
 
     Cloud cloud{W, H};
     ouster::LidarScan ls{W, H};
@@ -92,9 +92,12 @@ int main(int argc, char** argv) {
 
 
         //for sub cloud
-        ouster::LidarScan ls_sub{W_sub, H_sub}; //16 * 128;  1024*128
-        ouster::ScanBatcher batch_sub(W_sub, pf);
-        Cloud cloud_sub{W_sub, H_sub};
+        // ouster::LidarScan ls_sub{W_sub, H_sub}; //16 * 128;  1024*128
+        // ouster::ScanBatcher batch_sub(W_sub, pf);
+        // Cloud cloud_sub{W_sub, H_sub};
+        ouster::LidarScan ls_sub{W, H}; //16 * 128;  1024*128
+        ouster::ScanBatcher batch_sub(W, pf);
+        Cloud cloud_sub{W, H};
         // convert the package msg into laser scan
         if (batch_sub(pm.buf.data(), ls_sub, true)) {
             auto h = std::find_if(
@@ -103,6 +106,16 @@ int main(int argc, char** argv) {
                 });
             if (h != ls_sub.headers.end()) {
                 scan_to_cloud(xyz_lut_sub, h->timestamp, ls_sub, cloud_sub);
+                // std::cout << cloud_sub.size() << std::endl;
+                // for(Cloud::iterator it = cloud_sub.begin(); it != cloud_sub.end(); it++){
+                //     if(it->x == 0 && it->y ==0 && it->z ==0){
+                //         cloud_sub.erase(it);
+                //     }
+                // }
+                // std::cout << cloud_sub.size() << std::endl;
+
+
+
                 subCloud_pub.publish(ouster_ros::cloud_to_cloud_msg(
                     cloud_sub, h->timestamp, sensor_frame));
                 
