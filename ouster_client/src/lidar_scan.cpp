@@ -28,7 +28,6 @@ XYZLut make_xyz_lut(size_t w, size_t h, double range_unit,
             azimuth(i) = -azimuth_angles_deg[u] * M_PI / 180.0;
             altitude(i) = altitude_angles_deg[u] * M_PI / 180.0;
         }
-        // std::cout <<  v <<" encoder of lut:" << encoder(v) *180.0/(M_PI*1.0) << std::endl; 
     }
 
     XYZLut lut;
@@ -73,61 +72,7 @@ ScanBatcher::ScanBatcher(size_t w, const sensor::packet_format& pf)
 
 //for sub clouds
 bool ScanBatcher::operator()(const uint8_t* packet_buf, LidarScan& ls_sub, bool is_sub) {
-    // if(is_sub) {}
-    // using row_view_t_sub =
-    //     Eigen::Map<Eigen::Array<LidarScan::raw_t, Eigen::Dynamic,
-    //                             Eigen::Dynamic, Eigen::RowMajor>>;
 
-    // if (ls_sub.w != w || ls_sub.h != h)
-    //     throw std::invalid_argument("unexpected scan dimensions");
-
-    // bool swapped_sub = false;
-
-    // for (int icol = 0; icol < pf.columns_per_packet; icol++) {// 0 - 15
-        
-    //     const uint8_t* col_buf = pf.nth_col(icol, packet_buf);
-    //     const std::chrono::nanoseconds ts(pf.col_timestamp(col_buf));//0
-    //     const uint32_t encoder = pf.col_encoder(col_buf);
-    //     const uint32_t status = pf.col_status(col_buf);
-    //     const bool valid = (status == 0xffffffff);
-
-    //     // drop invalid / out-of-bounds data in case of misconfiguration
-    //     if (!valid ) {
-    //         // zero out missing columns
-    //         ls_write_sub.header(icol) = {ts, encoder, status};
-    //         auto rows = h * LidarScan::N_FIELDS;
-    //         row_view_t_sub{ls_write_sub.data.data(), rows, w}
-    //             .block(0, icol, rows,1)
-    //             .setZero();
-
-    //         continue;
-    //     }
-
-    //     ls_write_sub.header(icol) = {ts, encoder, status};
-    //     for (uint8_t ipx = 0; ipx < h; ipx++){
-    //         const uint8_t* px_buf = pf.nth_px(ipx, col_buf);
-
-    //         ls_write_sub.block(icol).row(ipx)
-    //             << static_cast<LidarScan::raw_t>(1000),//(pf.px_range(px_buf)),
-    //             static_cast<LidarScan::raw_t>(pf.px_signal(px_buf)),
-    //             static_cast<LidarScan::raw_t>(pf.px_ambient(px_buf)),
-    //             static_cast<LidarScan::raw_t>(pf.px_reflectivity(px_buf));
-    //     }
-    // }
-    // std::swap(ls_sub, ls_write_sub); 
-    // swapped_sub = true; 
-    // ls_write_sub.frame_id += 1; 
-    // return swapped_sub;
-
-
-
-
-
-
-
-
-    //second method
-    // if(is_sub) {}
     using row_view_t_sub =
         Eigen::Map<Eigen::Array<LidarScan::raw_t, Eigen::Dynamic,
                                 Eigen::Dynamic, Eigen::RowMajor>>;
@@ -138,22 +83,15 @@ bool ScanBatcher::operator()(const uint8_t* packet_buf, LidarScan& ls_sub, bool 
     bool swapped_sub = false;
     uint16_t max_m_id; 
 
-    // auto rows_sub = h * LidarScan::N_FIELDS;
-    // row_view_t_sub{ls_write_sub.data.data(), rows, w}
-    //     .block(0, 0, rows_sub,w)
-    //     .setZero();
-
-    for (int icol = 0; icol < pf.columns_per_packet; icol++) {// 0 - 15
+    for (int icol = 0; icol < pf.columns_per_packet; icol++) {
         
         const uint8_t* col_buf = pf.nth_col(icol, packet_buf);
-        const std::chrono::nanoseconds ts(pf.col_timestamp(col_buf));//0
+        const std::chrono::nanoseconds ts(pf.col_timestamp(col_buf));
         const uint32_t encoder = pf.col_encoder(col_buf);
         const uint32_t status = pf.col_status(col_buf);
         const bool valid = (status == 0xffffffff);
         const uint16_t m_id = pf.col_measurement_id(col_buf);
         max_m_id = m_id + 1; 
-
-        
 
         // drop invalid / out-of-bounds data in case of misconfiguration
         if (!valid ) {
@@ -163,7 +101,6 @@ bool ScanBatcher::operator()(const uint8_t* packet_buf, LidarScan& ls_sub, bool 
             row_view_t_sub{ls_write_sub.data.data(), rows, w}
                 .block(0, m_id, rows,1)
                 .setZero();
-
             continue;
         }
 
@@ -217,7 +154,6 @@ bool ScanBatcher::operator()(const uint8_t* packet_buf, LidarScan& ls) {
         const uint32_t encoder = pf.col_encoder(col_buf);
         const uint32_t status = pf.col_status(col_buf);
         const bool valid = (status == 0xffffffff);
-        // std::cout << m_id << ", " << f_id<< ", " << icol << ", " << ls_write.frame_id << std::endl;
 
         // drop invalid / out-of-bounds data in case of misconfiguration
         if (!valid || m_id >= w || f_id + 1 == ls_write.frame_id) {
