@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
 
     auto pf = sensor::get_format(info);
 
-    // uint32_t W_sub = pf.columns_per_packet; //16:  360 degree divided by 22.5 degree is 16 parts. 
+    uint32_t W_sub = pf.columns_per_packet; //16:  360 degree divided by 22.5 degree is 16 parts. 
     // uint32_t H_sub = info.format.pixels_per_column;
     // info_sub.format.columns_per_frame = W_sub; 
 
@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
     auto imu_pub = nh.advertise<sensor_msgs::Imu>("imu", 100);
 
     auto xyz_lut = ouster::make_xyz_lut(info);
-    auto xyz_lut_sub = ouster::make_xyz_lut(info);
+    
 
     Cloud cloud{W, H};
     ouster::LidarScan ls{W, H};
@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
     auto lidar_handler = [&](const PacketMsg& pm) mutable {
         
         //for whole cloud
-        /*
+        
         if (batch(pm.buf.data(), ls)) {//TODO: packetmsg to lidar scan
             auto h = std::find_if(
                 ls.headers.begin(), ls.headers.end(), [](const auto& h) {
@@ -90,15 +90,21 @@ int main(int argc, char** argv) {
                     cloud, h->timestamp, sensor_frame));
             }
         }
-        */
+        
 
 
         //for sub cloud
-        ouster::LidarScan ls_sub{W, H}; 
-        ouster::ScanBatcher batch_sub(W, pf);
-        Cloud cloud_sub{W, H};
+        ouster::LidarScan ls_sub{W_sub, H}; 
+        ouster::ScanBatcher batch_sub(W_sub, pf);
+        Cloud cloud_sub{W_sub, H};
         // convert the package msg into laser scan
         if (batch_sub(pm.buf.data(), ls_sub, true)) {
+
+            auto xyz_lut_sub = ouster::make_xyz_lut(W_sub, info_sub.format.pixels_per_column,
+                    sensor::range_unit, info_sub.lidar_origin_to_beam_origin_mm,
+                    info_sub.lidar_to_sensor_transform, info_sub.beam_azimuth_angles,
+                    info_sub.beam_altitude_angles, ls_sub.measure_id, W);
+
             auto h = std::find_if(
                 ls_sub.headers.begin(), ls_sub.headers.end(), [](const auto& h) {
                     return h.timestamp != std::chrono::nanoseconds{0};

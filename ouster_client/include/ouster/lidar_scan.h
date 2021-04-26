@@ -30,6 +30,7 @@ namespace ouster {
 class LidarScan {
    public:
     static constexpr int N_FIELDS = 4;
+    size_t measure_id; 
 
     using raw_t = uint32_t;
     using ts_t = std::chrono::nanoseconds;
@@ -184,6 +185,15 @@ inline XYZLut make_xyz_lut(const sensor::sensor_info& sensor) {
         sensor.lidar_to_sensor_transform, sensor.beam_azimuth_angles,
         sensor.beam_altitude_angles);
 }
+
+
+XYZLut make_xyz_lut(size_t w, size_t h, double range_unit,
+                    double lidar_origin_to_beam_origin_mm,
+                    const mat4d& transform,
+                    const std::vector<double>& azimuth_angles_deg,
+                    const std::vector<double>& altitude_angles_deg,
+                    size_t measure_id, 
+                    size_t W_total);
 
 /**
  * Convert LidarScan to cartesian points.
