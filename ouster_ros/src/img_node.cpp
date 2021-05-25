@@ -27,6 +27,7 @@
 #include "ouster/types.h"
 #include "ouster_ros/OSConfigSrv.h"
 #include "ouster_ros/ros.h"
+#include "intensity_processor/intensity_img_handler.hpp"
 
 namespace sensor = ouster::sensor;
 namespace viz = ouster::viz;
@@ -70,6 +71,9 @@ int main(int argc, char** argv) {
     std::stringstream encoding_ss;
     encoding_ss << "mono" << bit_depth;
     std::string encoding = encoding_ss.str();
+    // intensity_processor
+    intensityImgHandler intensity_handler;
+
 
     auto cloud_handler = [&](const sensor_msgs::PointCloud2::ConstPtr& m) {
         pcl::fromROSMsg(*m, cloud);
@@ -145,6 +149,9 @@ int main(int argc, char** argv) {
         range_image_pub.publish(range_image);
         ambient_image_pub.publish(ambient_image);
         intensity_image_pub.publish(intensity_image);
+
+        intensity_handler.intensityImgProcessor(m, intensity_image);
+
     };
 
     auto pc_sub =
