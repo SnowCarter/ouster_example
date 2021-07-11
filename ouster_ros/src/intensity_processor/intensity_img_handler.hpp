@@ -63,6 +63,33 @@ sensor_msgs::ImagePtr intensityImgHandler::cvMat2Image(std_msgs::Header header, 
 void intensityImgHandler::intensityImgProcessor(const sensor_msgs::PointCloud2::ConstPtr &cloudMsg, const sensor_msgs::Image &image_intensity){
     //get key frame
     // MASK = cv::Mat(image_intensity.height, image_intensity.width, CV_8UC1, cv::Scalar(255)); 
+    // add camera into intensity image
+    cv::Mat intensity_mat;
+
+    //convert sensor_msgs into cv::Mat
+    cv_bridge::CvImagePtr cv_ptr; 
+    cv_ptr = cv_bridge::toCvCopy(image_intensity);
+    intensity_mat = cv_ptr->image;
+
+    // scale camera image to keep it the same as intensity image's height.
+    cv::Mat camera_img, camera_img_scaled;
+    camera_img = cv::Mat(400, 400, CV_8UC1, cv::Scalar(0));
+    cv::resize(camera_img, camera_img_scaled, cv::Size(camera_img.cols, intensity_mat.rows), 0, 0, CV_INTER_LINEAR);
+    
+    // Concatenate intensity and camera image.
+    cv::hconcat(intensity_mat, camera_img_scaled, intensity_mat);
+
+    // convert pointcloud into grid map
+
+
+
+
+
+
+
+
+
+
     static int global_frame_index = 0;
     double image_time = cloudMsg->header.stamp.toSec(); 
     static double last_skip_time = -1; 
@@ -71,29 +98,26 @@ void intensityImgHandler::intensityImgProcessor(const sensor_msgs::PointCloud2::
 
     
     // sara_slam::KeyframeData keyframe;
-
-    cv_bridge::CvImagePtr cv_ptr; 
-    cv_ptr = cv_bridge::toCvCopy(image_intensity);
     // keyframe.orbFeatureData = extractOrbFeatures(image_time, cv_ptr->image);
 
     cv::Mat descriptors;
     std::vector<cv::KeyPoint> keypoints;
     cv::Ptr<cv::ORB> detector = cv::ORB::create(2500, 1.2f, 8, 1);
-    detector->detectAndCompute(cv_ptr->image, cv::Mat(), keypoints, descriptors);
+    detector->detectAndCompute(intensity_mat, cv::Mat(), keypoints, descriptors);
     // bow_descriptors.resize(descriptors.rows);
 
     //show features
     cv::Mat imgShow;
 
-    cv::drawKeypoints(cv_ptr->image, keypoints, imgShow, cv::Scalar::all(-1), cv::DrawMatchesFlags::DEFAULT );
+    cv::drawKeypoints(intensity_mat, keypoints, imgShow, cv::Scalar::all(-1), cv::DrawMatchesFlags::DEFAULT );
     cv::resize(imgShow, imgShow, cv::Size(), 2, 2);
     cv::imshow("BOW Keypoints", imgShow );
     cv::waitKey(10);
     // detect loop
-    int loop_intex = detectLoop(cv_ptr->image, descriptors, global_frame_index);
+    int loop_intex = detectLoop(intensity_mat, descriptors, global_frame_index);
     if(loop_intex > 1){
         cv::Mat imgShowTmp; 
-        imgShowTmp = cv_ptr->image.clone(); 
+        imgShowTmp = intensity_mat.clone(); 
         putText(imgShowTmp, "Index: " + std::to_string(global_frame_index), cv::Point2f(10, 50), CV_FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255), 2);
 
         auto it = image_pool.find(loop_intex);
